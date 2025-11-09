@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Roblox Username Tracker</title>
+  </head>
+  <body>
+    <h1>Roblox Username Tracker</h1>
+
+    <input id="username" placeholder="Enter Roblox username" />
+    <button id="addBtn">Add</button>
+
+    <h2>All usernames:</h2>
+    <ul id="list"></ul>
+
+    <!-- Firebase compat SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore-compat.js"></script>
+
+    <script>
+      const firebaseConfig = {
+        apiKey: "AIzaSyA8bgBbHXaLJBw52yABThfRDpvOxT1cvds",
+        authDomain: "etohvote.firebaseapp.com",
+        projectId: "etohvote",
+        storageBucket: "etohvote.firebasestorage.app",
+        messagingSenderId: "323049176948",
+        appId: "1:323049176948:web:cdc4173421a7e778f7b621",
+      };
+
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.firestore();
+
+      const usernameInput = document.getElementById("username");
+      const addBtn = document.getElementById("addBtn");
+      const list = document.getElementById("list");
+
+      db.collection("usernames").onSnapshot(snapshot => {
+        list.innerHTML = "";
+        snapshot.forEach(doc => {
+          const li = document.createElement("li");
+          li.textContent = doc.data().name;
+          list.appendChild(li);
+        });
+      });
+
+      async function isValidRobloxUser(username) {
+        const res = await fetch("/.netlify/functions/check-user", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username }),
+        });
+        const data = await res.json();
+        return data.data && data.data.length > 0;
+      }
+
+      addBtn.onclick = async () => {
+        const name = usernameInput.value.trim();
+        if (!name) return alert("Please type a username.");
+
+        const valid = await isValidRobloxUser(name);
+        if (!valid) return alert("That username doesn't exist on Roblox.");
+
+        const existing = await db.collection("usernames")
+          .where("name", "==", name)
+          .get();
+
+        if (!existing.empty) {
+          alert("That username is already listed.");
+          usernameInput.value = "";
+          return;
+        }
+
+        await db.collection("usernames").add({ name });
+        usernameInput.value = "";
+      };
+    </script>
+  </body>
+</html>
